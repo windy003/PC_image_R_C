@@ -34,7 +34,7 @@ class ImageConverterGUI(QMainWindow):
         layout = QVBoxLayout(main_widget)
         
         # 添加版本信息标签
-        version_label = QLabel('版本: 2025/1/22')
+        version_label = QLabel('版本: 2025/1/22-01')
         version_label.setAlignment(Qt.AlignmentFlag.AlignRight)  # 右对齐
         layout.addWidget(version_label)
         
@@ -68,7 +68,7 @@ class ImageConverterGUI(QMainWindow):
         format_layout = QHBoxLayout()
         format_label = QLabel('输出格式(&F):')
         self.format_combo = QComboBox()
-        self.format_combo.addItems(['PNG', 'JPEG', 'BMP', 'GIF', 'ICO'])
+        self.format_combo.addItems(['PNG', 'JPEG', 'BMP', 'GIF', 'ICO', 'WEBP'])
         format_label.setBuddy(self.format_combo)  # 设置快捷键关联
         format_layout.addWidget(format_label)
         format_layout.addWidget(self.format_combo)
@@ -93,7 +93,7 @@ class ImageConverterGUI(QMainWindow):
             self,
             "选择图片",
             desktop_path,  # 设置默认打开位置为桌面
-            "图片文件 (*.png *.jpg *.jpeg *.bmp *.gif)"
+            "图片文件 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"
         )
         if file_name:
             self.input_path = file_name
