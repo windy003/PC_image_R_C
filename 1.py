@@ -8,7 +8,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QPushButton, QLabel,
                             QVBoxLayout, QHBoxLayout, QWidget, QFileDialog,
                             QSpinBox, QComboBox, QMessageBox, QRadioButton, QButtonGroup)
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSettings
 from PyQt6.QtGui import QIcon
 
 def resource_path(relative_path):
@@ -107,20 +107,37 @@ class ImageConverterGUI(QMainWindow):
         layout.addWidget(self.convert_button)
         
         self.input_path = None
+
+        # 读取上次保存的设置（使用INI文件，保存在程序同目录下）
+        ini_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'settings.ini')
+        self.settings = QSettings(ini_path, QSettings.Format.IniFormat)
+        self.last_open_dir = str(self.settings.value('last_open_dir', ''))
+        saved_width = int(self.settings.value('width', 800))
+        saved_height = int(self.settings.value('height', 600))
+        saved_format = str(self.settings.value('format', 'PNG'))
+        self.width_spin.setValue(saved_width)
+        self.height_spin.setValue(saved_height)
+        idx = self.format_combo.findText(saved_format)
+        if idx >= 0:
+            self.format_combo.setCurrentIndex(idx)
         
     def select_file(self):
-        # 获取桌面路径
-        desktop_path = os.path.join(os.path.expanduser('~'), 'Desktop')
-        
+        # 优先使用上次打开的目录，否则使用桌面路径
+        open_dir = self.last_open_dir if self.last_open_dir and os.path.isdir(self.last_open_dir) else os.path.join(os.path.expanduser('~'), 'Desktop')
+
         file_name, _ = QFileDialog.getOpenFileName(
             self,
             "选择图片",
-            desktop_path,  # 设置默认打开位置为桌面
+            open_dir,
             "图片文件 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"
         )
         if file_name:
             self.input_path = file_name
             self.file_label.setText(os.path.basename(file_name))
+            # 记住本次打开的目录
+            self.last_open_dir = os.path.dirname(file_name)
+            self.settings.setValue('last_open_dir', self.last_open_dir)
+            self.settings.sync()
             
     def convert_image(self):
         if not self.input_path:
@@ -155,8 +172,17 @@ class ImageConverterGUI(QMainWindow):
             output_path = os.path.join(output_dir, output_filename)
             
             # 保存转换后的图片
-            resized_img.save(output_path, format=output_format)
+            if output_format == 'ICO':
+                resized_img.save(output_path, format=output_format, sizes=[output_size])
+            else:
+                resized_img.save(output_path, format=output_format)
             
+            # 保存当前设置供下次使用
+            self.settings.setValue('width', output_size[0])
+            self.settings.setValue('height', output_size[1])
+            self.settings.setValue('format', output_format)
+            self.settings.sync()
+
             QMessageBox.information(self, '成功', f'图片已成功保存到: {output_path}')
             
         except Exception as e:
