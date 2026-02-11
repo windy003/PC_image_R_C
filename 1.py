@@ -1,9 +1,13 @@
 from PIL import Image
 import os
 import sys
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QPushButton, QLabel, 
-                            QVBoxLayout, QHBoxLayout, QWidget, QFileDialog, 
-                            QSpinBox, QComboBox, QMessageBox)
+from dotenv import load_dotenv
+
+# 加载 .env 配置文件
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QPushButton, QLabel,
+                            QVBoxLayout, QHBoxLayout, QWidget, QFileDialog,
+                            QSpinBox, QComboBox, QMessageBox, QRadioButton, QButtonGroup)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 
@@ -22,7 +26,7 @@ class ImageConverterGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('图片转换工具')
-        self.setFixedSize(400, 300)
+        self.setFixedSize(400, 350)
         
         # 设置程序图标
         icon_path = resource_path("icon.ico")
@@ -73,14 +77,33 @@ class ImageConverterGUI(QMainWindow):
         format_layout.addWidget(format_label)
         format_layout.addWidget(self.format_combo)
         
+        # 输出目录选择部分
+        output_dir_layout = QHBoxLayout()
+        self.output_dir_group = QButtonGroup(self)
+        self.radio_original = QRadioButton('保存到原文件目录')
+        self.radio_original.setChecked(True)
+
+        env_output_dir = os.environ.get('output_dir', '').strip()
+        if env_output_dir:
+            self.radio_specified = QRadioButton(f'保存到指定目录: {env_output_dir}')
+        else:
+            self.radio_specified = QRadioButton('保存到指定目录: (未配置)')
+            self.radio_specified.setEnabled(False)
+
+        self.output_dir_group.addButton(self.radio_original, 0)
+        self.output_dir_group.addButton(self.radio_specified, 1)
+        output_dir_layout.addWidget(self.radio_original)
+        output_dir_layout.addWidget(self.radio_specified)
+
         # 转换按钮
         self.convert_button = QPushButton('转换并保存(&S)')
         self.convert_button.clicked.connect(self.convert_image)
-        
+
         # 添加所有部件到主布局
         layout.addLayout(file_layout)
         layout.addLayout(size_layout)
         layout.addLayout(format_layout)
+        layout.addLayout(output_dir_layout)
         layout.addWidget(self.convert_button)
         
         self.input_path = None
@@ -120,12 +143,16 @@ class ImageConverterGUI(QMainWindow):
                 if resized_img.mode != 'RGBA':
                     resized_img = resized_img.convert('RGBA')
             
-            # 获取桌面路径
-            desktop_path = os.path.join(os.path.expanduser('~'), 'Desktop')
-            
+            # 根据单选按钮选择输出目录
+            if self.output_dir_group.checkedId() == 0:
+                output_dir = os.path.dirname(self.input_path)
+            else:
+                output_dir = os.environ.get('output_dir', '').strip()
+            os.makedirs(output_dir, exist_ok=True)
+
             # 构建输出文件路径（使用分辨率作为文件名）
             output_filename = f'{output_size[0]}x{output_size[1]}.{output_format.lower()}'
-            output_path = os.path.join(desktop_path, output_filename)
+            output_path = os.path.join(output_dir, output_filename)
             
             # 保存转换后的图片
             resized_img.save(output_path, format=output_format)
